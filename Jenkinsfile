@@ -1,19 +1,15 @@
 pipeline {
-    agent {
-        docker {
-            image 'node:18'   // ✅ Runs inside Node 18 container with npm & node
-        }
-    }
+    agent any   // ✅ no Docker
 
     environment {
-        VERCEL_TOKEN = credentials('vercel-token')   // ✅ already in your setup
-        SLACK_WEBHOOK = credentials('slack-webhook') // ✅ added Slack webhook
+        VERCEL_TOKEN = credentials('vercel-token')
+        SLACK_WEBHOOK = credentials('slack-webhook')
     }
 
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/your-org/your-repo.git'
+                git branch: 'main', url: 'https://github.com/Monica-mwangi/gallery.git'
             }
         }
 
