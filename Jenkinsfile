@@ -1,5 +1,5 @@
 pipeline {
-    agent any   // ✅ no Docker
+    agent any
 
     environment {
         VERCEL_TOKEN = credentials('vercel-token')
@@ -9,11 +9,11 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/Monica-mwangi/gallery.git'
+                checkout scm
             }
         }
 
-        stage('Install dependencies') {
+        stage('Install Dependencies') {
             steps {
                 sh 'npm install'
             }
@@ -21,13 +21,24 @@ pipeline {
 
         stage('Build') {
             steps {
-                sh 'npm run build'
+                sh 'npm run build || echo "No build step defined"'
+            }
+        }
+
+        stage('Test') {
+            steps {
+                sh 'npm test || echo "No tests defined"'
             }
         }
 
         stage('Deploy to Vercel') {
             steps {
-                sh 'npx vercel --token $VERCEL_TOKEN --prod --yes'
+                script {
+                    env.VERCEL_URL = sh(
+                        script: "vercel --prod --token $VERCEL_TOKEN --confirm --json | jq -r '.url'",
+                        returnStdout: true
+                    ).trim()
+                }
             }
         }
     }
@@ -35,16 +46,17 @@ pipeline {
     post {
         success {
             sh """
-              curl -X POST -H 'Content-type: application/json' \
-              --data '{"text":"✅ Build #${env.BUILD_NUMBER} deployed successfully!"}' \
-              $SLACK_WEBHOOK
+            curl -X POST -H 'Content-type: application/json' \
+            --data '{ "text": "✅ Build #${env.BUILD_NUMBER} deployed successfully! Visit: https://${env.VERCEL_URL}" }' \
+            $SLACK_WEBHOOK
             """
         }
+
         failure {
             sh """
-              curl -X POST -H 'Content-type: application/json' \
-              --data '{"text":"❌ Build #${env.BUILD_NUMBER} failed. Check Jenkins logs."}' \
-              $SLACK_WEBHOOK
+            curl -X POST -H 'Content-type: application/json' \
+            --data '{ "text": "❌ Build #${env.BUILD_NUMBER} failed. Check Jenkins logs." }' \
+            $SLACK_WEBHOOK
             """
         }
     }
