@@ -40,7 +40,7 @@ pipeline {
                     script {
                         echo "Deploying to Render..."
                         sh """
-                        curl -X POST https://api.render.com/deploy/srv-${RENDER_SERVICE_ID} \
+                        curl -X POST https://api.render.com/v1/services/srv-${RENDER_SERVICE_ID}/deploys \
                         -H "Accept: application/json" \
                         -H "Authorization: Bearer ${RENDER_API_KEY}" \
                         -H "Content-Type: application/json" \
