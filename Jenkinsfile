@@ -1,23 +1,16 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'node:18'   // or node:20 if your app supports it
+            args '-u root'    // optional: lets you install extra packages inside container
+        }
+    }
 
     environment {
         VERCEL_TOKEN = credentials('vercel-token')
-        SLACK_WEBHOOK = credentials('slack-webhook')
     }
 
     stages {
-        stage('Setup Tools') {
-            steps {
-                // Install jq and Vercel CLI
-                sh '''
-                  apt-get update -y
-                  apt-get install -y jq
-                  npm install -g vercel
-                '''
-            }
-        }
-
         stage('Checkout') {
             steps {
                 checkout scm
@@ -46,7 +39,7 @@ pipeline {
             steps {
                 script {
                     env.VERCEL_URL = sh(
-                        script: "vercel --prod --token $VERCEL_TOKEN --confirm --json | jq -r '.url'",
+                        script: "npx vercel --prod --token $VERCEL_TOKEN --confirm --json | jq -r '.url'",
                         returnStdout: true
                     ).trim()
                 }
@@ -58,7 +51,7 @@ pipeline {
         success {
             sh """
               curl -X POST -H 'Content-type: application/json' \
-              --data '{"text":"✅ Build #${env.BUILD_NUMBER} deployed successfully to Vercel!\\nVisit: https://${env.VERCEL_URL}"}' \
+              --data '{"text":"✅ Build #${env.BUILD_NUMBER} deployed successfully to Vercel! Visit: https://${env.VERCEL_URL}"}' \
               $SLACK_WEBHOOK
             """
         }
