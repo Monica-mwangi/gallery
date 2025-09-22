@@ -59,7 +59,8 @@ pipeline {
             withCredentials([string(credentialsId: 'SLACK_WEBHOOK', variable: 'SLACK_WEBHOOK')]) {
                 script {
                     def statusMsg = currentBuild.currentResult == 'SUCCESS' ? 
-                        "✅ Build #${BUILD_NUMBER} deployed successfully!" : 
+                        "✅ Build #${BUILD_NUMBER} deployed successfully!" " https://gallery-83gn.onrender.com/?msg=File%20uploaded%20successfully":
+                         
                         "❌ Build #${BUILD_NUMBER} failed. Check Jenkins logs."
                     
                     sh """

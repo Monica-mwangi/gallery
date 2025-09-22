@@ -2,14 +2,20 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const path = require('path');
+const config = require('./_config');
+const app = express();
 
 // Define routes
 let index = require('./routes/index');
 let image = require('./routes/image');
 
 // ✅ Connect to MongoDB Atlas
+
+console.log(config.mongoURI[app.settings.env])
+
 mongoose.connect(
-  process.env.MONGO_URI,  // read from environment variable
+  process.env.MONGO_URI || config.mongoURI[app.settings.env],
+   // read from environment variable
   { useNewUrlParser: true, useUnifiedTopology: true }
 )
 .then(() => console.log("✅ Connected to MongoDB Atlas"))
@@ -17,7 +23,7 @@ mongoose.connect(
 
 
 // Initialize the app
-const app = express();
+
 
 // View Engine
 app.set('view engine', 'ejs');
@@ -37,3 +43,5 @@ const PORT = process.env.PORT || 5001;
 app.listen(PORT, () => {
     console.log(`🚀 Server is listening at http://localhost:${PORT}`);
 });
+
+module.exports = app;
