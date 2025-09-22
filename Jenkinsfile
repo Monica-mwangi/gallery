@@ -43,7 +43,8 @@ pipeline {
                         curl -X POST https://api.render.com/v1/services/srv-${RENDER_SERVICE_ID}/deploys \
                         -H "Accept: application/json" \
                         -H "Authorization: Bearer ${RENDER_API_KEY}" \
-                        -H "Content-Type: application/json"     
+                        -H "Content-Type: application/json" \
+                        -d "{"clearCache": true}"
                         """
                         echo "✅ Deployment triggered!"
                     }
