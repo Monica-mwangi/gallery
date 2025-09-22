@@ -40,10 +40,16 @@ pipeline {
                     script {
                         echo "Deploying to Render..."
                         sh """
-                        curl -s -X POST "https://api.render.com/v1/services/srv-d38jo21r0fns7382d610/deploys" \
-     -H "Accept: application/json" \
-     -H "Authorization: Bearer rnd_q5vaSkRd5elHthbCJCKRqNcqagBg" \
-     -H "Content-Type: application/json"
+                        curl --request POST \
+     --url https://api.render.com/v1/services/srv-d38jo21r0fns7382d610/deploys \
+     --header 'accept: application/json' \
+     --header 'content-type: application/json' \
+     --header 'authorization: Bearer rnd_q5vaSkRd5elHthbCJCKRqNcqagBg' \
+     --data '
+{
+  "clearCache": "clear"
+}
+   '
                         """
                         echo "✅ Deployment triggered!"
                     }
