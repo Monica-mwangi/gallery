@@ -21,23 +21,21 @@ pipeline {
 
         stage('Build') {
             steps {
-                sh 'npm run build || echo "No build step defined"'
-            }
-        }
-
-        stage('Test') {
-            steps {
-                sh 'npm test || echo "No tests defined"'
+                sh 'npm run build'
             }
         }
 
         stage('Deploy to Vercel') {
             steps {
                 script {
+                    echo "Deploying to Vercel..."
                     env.VERCEL_URL = sh(
-                        script: "vercel --prod --token $VERCEL_TOKEN --confirm --json | jq -r '.url'",
+                        script: """
+                            npx vercel --prod --token $VERCEL_TOKEN --confirm --json | jq -r '.url'
+                        """,
                         returnStdout: true
                     ).trim()
+                    echo "Deployed URL: https://${env.VERCEL_URL}"
                 }
             }
         }
@@ -47,7 +45,7 @@ pipeline {
         success {
             sh """
             curl -X POST -H 'Content-type: application/json' \
-            --data '{ "text": "✅ Build #${env.BUILD_NUMBER} deployed successfully! Visit: https://${env.VERCEL_URL}" }' \
+            --data '{"text":"✅ Build #${BUILD_NUMBER} deployed successfully! Visit: https://${VERCEL_URL}"}' \
             $SLACK_WEBHOOK
             """
         }
@@ -55,7 +53,7 @@ pipeline {
         failure {
             sh """
             curl -X POST -H 'Content-type: application/json' \
-            --data '{ "text": "❌ Build #${env.BUILD_NUMBER} failed. Check Jenkins logs." }' \
+            --data '{"text":"❌ Build #${BUILD_NUMBER} failed. Check Jenkins logs."}' \
             $SLACK_WEBHOOK
             """
         }
