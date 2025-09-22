@@ -1,10 +1,5 @@
 pipeline {
-    agent {
-        docker {
-            image 'node:18'
-            args '-u root'
-        }
-    }
+    agent any
 
     environment {
         VERCEL_TOKEN = credentials('vercel-token')
@@ -13,7 +8,12 @@ pipeline {
     stages {
         stage('Setup Tools') {
             steps {
-                sh 'apt-get update && apt-get install -y jq'
+                // Ensure jq and vercel CLI are available
+                sh '''
+                  sudo apt-get update
+                  sudo apt-get install -y jq
+                  npm install -g vercel
+                '''
             }
         }
 
@@ -43,7 +43,6 @@ pipeline {
 
         stage('Deploy to Vercel') {
             steps {
-                sh 'npm install -g vercel'
                 script {
                     env.VERCEL_URL = sh(
                         script: "vercel --prod --token $VERCEL_TOKEN --confirm --json | jq -r '.url'",
