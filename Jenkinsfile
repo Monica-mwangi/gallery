@@ -44,7 +44,7 @@ pipeline {
                         -H "Accept: application/json" \
                         -H "Authorization: Bearer ${RENDER_API_KEY}" \
                         -H "Content-Type: application/json" \
-                        -d "{"clearCache": true}"
+                        -d "{\"clearCache\": true}"
                         """
                         echo "✅ Deployment triggered!"
                     }
