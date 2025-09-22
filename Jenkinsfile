@@ -3,17 +3,16 @@ pipeline {
 
     environment {
         VERCEL_TOKEN = credentials('vercel-token')
+        SLACK_WEBHOOK = credentials('slack-webhook')
     }
 
     stages {
         stage('Setup Tools') {
             steps {
+                // Install jq and Vercel CLI
                 sh '''
-                  # Update and install jq if available
-                  apt-get update || true
-                  apt-get install -y jq || true
-
-                  # Install vercel CLI (locally for this workspace)
+                  apt-get update -y
+                  apt-get install -y jq
                   npm install -g vercel
                 '''
             }
@@ -57,22 +56,19 @@ pipeline {
 
     post {
         success {
-            // Using webhookUrl credentials instead of tokenCredentialId
-            slackSend(
-                webhookUrl: credentials('slack-webhook'),
-                channel: '#all-jenkinsnotifier',
-                color: 'good',
-                message: "✅ Build #${env.BUILD_NUMBER} deployed successfully to Vercel!\nVisit: https://${env.VERCEL_URL}"
-            )
+            sh """
+              curl -X POST -H 'Content-type: application/json' \
+              --data '{"text":"✅ Build #${env.BUILD_NUMBER} deployed successfully to Vercel!\\nVisit: https://${env.VERCEL_URL}"}' \
+              $SLACK_WEBHOOK
+            """
         }
 
         failure {
-            slackSend(
-                webhookUrl: credentials('slack-webhook'),
-                channel: '#all-jenkinsnotifier',
-                color: 'danger',
-                message: "❌ Build #${env.BUILD_NUMBER} failed. Check Jenkins logs."
-            )
+            sh """
+              curl -X POST -H 'Content-type: application/json' \
+              --data '{"text":"❌ Build #${env.BUILD_NUMBER} failed. Check Jenkins logs."}' \
+              $SLACK_WEBHOOK
+            """
         }
     }
 }
