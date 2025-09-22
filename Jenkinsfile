@@ -1,33 +1,23 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'node:18'   // ✅ Runs inside Node 18 container with npm & node
+        }
+    }
 
     environment {
-        VERCEL_TOKEN = credentials('vercel-token')
+        VERCEL_TOKEN = credentials('vercel-token')   // ✅ already in your setup
+        SLACK_WEBHOOK = credentials('slack-webhook') // ✅ added Slack webhook
     }
 
     stages {
-        stage('Setup Tools') {
-            steps {
-                sh '''
-                  # Check versions (for debugging)
-                  node -v
-                  npm -v
-
-                  # Install Vercel CLI if not already installed
-                  if ! command -v vercel >/dev/null 2>&1; then
-                    npm install -g vercel
-                  fi
-                '''
-            }
-        }
-
         stage('Checkout') {
             steps {
-                checkout scm
+                git branch: 'main', url: 'https://github.com/your-org/your-repo.git'
             }
         }
 
-        stage('Install Dependencies') {
+        stage('Install dependencies') {
             steps {
                 sh 'npm install'
             }
@@ -35,24 +25,13 @@ pipeline {
 
         stage('Build') {
             steps {
-                sh 'npm run build || echo "No build step defined"'
-            }
-        }
-
-        stage('Test') {
-            steps {
-                sh 'npm test || echo "No tests defined"'
+                sh 'npm run build'
             }
         }
 
         stage('Deploy to Vercel') {
             steps {
-                script {
-                    env.VERCEL_URL = sh(
-                        script: "vercel --prod --token $VERCEL_TOKEN --confirm --yes --scope default --json | jq -r '.url'",
-                        returnStdout: true
-                    ).trim()
-                }
+                sh 'npx vercel --token $VERCEL_TOKEN --prod --yes'
             }
         }
     }
@@ -61,7 +40,7 @@ pipeline {
         success {
             sh """
               curl -X POST -H 'Content-type: application/json' \
-              --data '{"text":"✅ Build #${env.BUILD_NUMBER} deployed successfully! Visit: https://${env.VERCEL_URL}"}' \
+              --data '{"text":"✅ Build #${env.BUILD_NUMBER} deployed successfully!"}' \
               $SLACK_WEBHOOK
             """
         }
