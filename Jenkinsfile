@@ -1,12 +1,6 @@
 pipeline {
     agent any
 
-    environment {
-        RENDER_SERVICE_ID = credentials('render-service-id') // your Render service ID
-        RENDER_API_KEY = credentials('render-api-key')       // your Render API key
-        SLACK_WEBHOOK = credentials('slack-webhook')
-    }
-
     stages {
         stage('Checkout') {
             steps {
@@ -22,42 +16,59 @@ pipeline {
 
         stage('Build') {
             steps {
-                sh 'npm run build || echo "No build step required"' // your package has no build script, so this is safe
+                script {
+                    // If you don’t have a build step, skip this
+                    if (fileExists('package.json')) {
+                        def pkg = readJSON file: 'package.json'
+                        if (pkg.scripts?.build) {
+                            sh 'npm run build'
+                        } else {
+                            echo "No build script defined, skipping build step."
+                        }
+                    }
+                }
             }
         }
 
         stage('Deploy to Render') {
             steps {
-                script {
-                    echo "Deploying to Render..."
-                    sh """
+                // Inject credentials for this stage
+                withCredentials([
+                    string(credentialsId: 'RENDER_API_KEY', variable: 'RENDER_API_KEY'),
+                    string(credentialsId: 'RENDER_SERVICE_ID', variable: 'RENDER_SERVICE_ID')
+                ]) {
+                    script {
+                        echo "Deploying to Render..."
+                        sh """
                         curl -X POST https://api.render.com/deploy/srv-${RENDER_SERVICE_ID} \
-                        -H 'Accept: application/json' \
-                        -H 'Authorization: Bearer ${RENDER_API_KEY}' \
-                        -H 'Content-Type: application/json' \
+                        -H "Accept: application/json" \
+                        -H "Authorization: Bearer ${RENDER_API_KEY}" \
+                        -H "Content-Type: application/json" \
                         -d '{"clearCache": true}'
-                    """
-                    echo "✅ Deployment triggered!"
+                        """
+                        echo "✅ Deployment triggered!"
+                    }
                 }
             }
         }
     }
 
     post {
-        success {
-            sh """
-            curl -X POST -H 'Content-type: application/json' \
-            --data '{"text":"✅ Build #${BUILD_NUMBER} deployed successfully!"}' \
-            $SLACK_WEBHOOK
-            """
-        }
-
-        failure {
-            sh """
-            curl -X POST -H 'Content-type: application/json' \
-            --data '{"text":"❌ Build #${BUILD_NUMBER} failed. Check Jenkins logs."}' \
-            $SLACK_WEBHOOK
-            """
+        // Inject Slack webhook for notifications
+        always {
+            withCredentials([string(credentialsId: 'SLACK_WEBHOOK', variable: 'SLACK_WEBHOOK')]) {
+                script {
+                    def statusMsg = currentBuild.currentResult == 'SUCCESS' ? 
+                        "✅ Build #${BUILD_NUMBER} deployed successfully!" : 
+                        "❌ Build #${BUILD_NUMBER} failed. Check Jenkins logs."
+                    
+                    sh """
+                    curl -X POST -H 'Content-type: application/json' \
+                    --data '{"text":"${statusMsg}"}' \
+                    $SLACK_WEBHOOK
+                    """
+                }
+            }
         }
     }
 }
